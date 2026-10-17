@@ -1,0 +1,70 @@
+Version name: 1.0.0
+Updated: 2026-10-17
+
+Release notes — First semantic version and documentation update
+
+1. Version identifier
+- Issue: The previous identifier (2026.10.17.3) used a date-based format and did not clearly communicate a conventional release sequence.
+- Why changed: Adopted 1.0.0 as the first semantic version for the current application and retained the prior identifier below as historical context.
+- If not changed: Team members could have difficulty identifying the current release and relating changes to one another.
+- Status: Documentation/version label only; no application behavior changed in this release.
+
+2. Change rationale
+- Issue: The existing change list described features but did not consistently explain the user-facing issue, reason for the change, or impact if the issue remained.
+- Why changed: Updated next_ui_update.txt with a control-by-control issue / why changed / if not changed / status record.
+- If not changed: Reviewers could see what was implemented but not why it mattered or what risk it addressed.
+- Status: Documentation updated. Existing implementation and test results are carried forward from 2026.10.17.3.
+
+3. Historical runtime incident
+- Issue: The previous release's browser showed an ImportError because a running Streamlit process retained a stale engine module.
+- Why changed: Recorded the actual recovery (restart the process to load the already-updated engine) for traceability.
+- If not changed: Future maintainers might look for an unnecessary source-code workaround or repeat the troubleshooting.
+- Status: Resolved in the previous release; the app and health endpoint were verified after restart.
+
+Feature context carried forward:
+- The what-if scenarios and their documentation were implemented in version 2026.10.17.3. This documentation release does not claim to introduce that feature again.
+
+Prior implementation history (carried forward from version 2026.10.17.3):
+
+Changes in the earlier cumulative implementation:
+- Added non-destructive what-if sensitivity scenarios for Base data volume, peak CPU/RAM demand, and combined changes; included results in the UI, JSON, and printable HTML report.
+- Documented field units, scenario assumptions, and the distinction between raw disk capacity and usable storage.
+- Kept full precision in sizing calculations; round only the displayed forecast values.
+- Added numeric validation for invalid and overflowing Base and Data Services inputs.
+- Added the workbook rules version and source to the UI and exports.
+- Improved metric-card contrast for light and dark themes.
+- Clarified Base-only Data Services behavior and added a link to change scope.
+- Added a review and confirmation step before final results.
+- Require review confirmation for the exact current inputs before results/exports; changed inputs invalidate the confirmation.
+- Clarified percentage labels, displayed capacity figures, sizing drivers, and remaining raw capacity.
+- Expanded HTML, JSON, and CSV reports with current scope, inputs, rules, warnings, and sizing details.
+- Added regression checks for workbook example values, every Base sizing driver, invalid values, and calculation precision.
+- Added separate environment profiles and results; counts are not combined across environments.
+- Added TB/GB and GB/day/TB/day input selectors, normalized to canonical units with the approved 1024 conversion.
+- Added engine-level per-environment calculation and tested separate Base-only versus Base + Data Services totals.
+- Keep saved environment profiles when selections change; prevent continuing with no selected environment.
+- Include Data Services input units in the per-environment exports.
+- Documented that workbook sample defaults are 3x compression and 40% cold data.
+- Renamed the initial data input to “Initial raw data volume,” removing “day-1” wording.
+- Clarified peak concurrent CPU demand as total vCores at peak concurrency and peak memory demand as total GB RAM at peak concurrency, including their use in CPU/memory worker sizing.
+- Fixed report/export unit-map indentation so the Streamlit app compiles and runs.
+
+Baseline:
+- Base example: 19 workers, 3 masters; required raw disk 1038.4466911764707 TB.
+- Data Services example: 13 workers, 3 masters.
+- Rules source: Workbook 1.0 (October 2026).
+- Approved choices: separate cluster per environment, binary 1024 conversion, and annotated workbook defaults.
+
+Workbook defaults audit (workbook cell = engine default = UI profile default):
+- Base inputs: B5 200 TB, B6 500 GB/day, B7 0.20, B8 3 years, B9 3x, B10 0.40, B11 3x, B12 1.5x, B13 0.30, B14 0.85, B17 8 TB, B18 10 disks, B19 96 vCores, B20 384 GB RAM, B21 0.15, B22 800 vCores, B23 6000 GB RAM, B24 3 workers.
+- Base outputs: B35 848.73046875 TB, B36 282.91015625 TB, B37 2.4x, B38 678.984375 TB, B39 1038.4466911764707 TB, B42 13 storage workers, B43 10 CPU workers, B44 19 memory workers, B45 9 EC minimum, B46 19 workers, B48 3 masters, B49 1520 TB installed raw capacity.
+- Screenshot mismatch verified: the screenshot-style 6x compression / 34% cold-data inputs produce 538.694221047794 TB, while the workbook's B9=3x and B10=40% example produces 1038.4466911764707 TB. Both retain 19 workers; the workbook result is not forced to the screenshot value.
+- Data Services quantities (B6:B15): 1, 2, 4, 20, 0, 1, 1, 10, 1, 20. Per-unit resources (vCores/RAM GB/block GB/cache GB): 4/16/100/0, 2/8/100/0, 12/128/0/600, 12/128/0/600, 12/128/0/600, 4/16/50/0, 16/64/200/0, 8/32/0/0, 32/128/2600/0, 2/8/0/0.
+- Data Services worker defaults: B19 80 vCores, B20 415 GB RAM, B21 4000 GB block, B22 1800 GB cache, B23 1024 GB reserve, B24 0.10 overhead, B25 0.20 headroom, B26 4 minimum workers. Outputs: G16:J16 468/3792/3150/14400; B29:B33 8/13/2/8/13 workers; B34 Memory driver; B35 3 masters; B36 16 total nodes.
+- The application adds a per-environment HA toggle; workbook Base B48 is 3 masters by default and 5 above 200 workers. Non-HA master counts are an explicit application override, not a workbook default.
+
+Validation policy:
+- No business-specific upper caps were approved; reject non-finite and overflowing calculations.
+
+Pending external information:
+- Hardware catalog and Cloudera product version for complete hardware recommendations.

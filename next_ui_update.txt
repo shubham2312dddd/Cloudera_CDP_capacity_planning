@@ -1,0 +1,387 @@
+Cloudera Infrastructure Sizing Studio
+UI REVIEW, DATA-DYNAMICITY ISSUES, AND IMPLEMENTATION INSTRUCTIONS
+Prepared from the provided UI screenshot
+Do not simply change the UI labels or hardcode new values. Every editable input must flow into the sizing engine, and all dependent calculations, warnings, summaries, tables, charts, and exports must update from the same current state. Avoid separate hardcoded values in the UI and engine. Keep formula logic in the sizing engine and use the UI only to collect inputs and present results.
+
+A. ISSUES VISIBLE IN THE SCREENSHOs and the workbook context
+Date: 16 October 2026
+
+PURPOSE
+Review the current Streamlit UI against the supplied Cloudera CDP Capacity / Cluster Planning workbook. Identify issues before changing code. The goal is to make inputs flexible, calculations transparent, and outputs consistent with the workbook. Treat the workbook as the source of planning rules, but validate assumptions with the senior team before production use.
+
+IMPORTANT IMPLEMENTATION RULETS
+
+1. Environment selection is single-select
+Current UI offers one environment at a time: Production, UAT, Development, or PoC.
+Requested improvement: allow a user to select multiple environments (for example Production + UAT).
+Important design note: do not combine environments into one indistinguishable sizing result. Each selected environment should have its own configuration and results, or the application should calculate a clearly explained combined/shared cluster where that is actually intended. Ask the senior which model is required. Production may require HA and different assumptions from UAT/Development/PoC.
+
+2. Input units are not sufficiently flexible/explicit
+The current screen shows Initial day-1 raw data (TB) and Daily net-new ingest (GB/day). This forces users to convert units before entering values.
+Requested improvement:
+- Let the user select or enter data in supported units such as TB or GB for initial data, and GB/day or TB/day for daily ingest.
+- Convert all input values to one canonical internal unit before calculations (preferably TB, with explicit decimal-vs-binary conversion policy).
+- Show the chosen unit beside the field and in review/results.
+- Do not silently interpret a number using a different unit.
+- Add validation for zero, negative, excessively large, and invalid values.
+- Be consistent about whether 1 TB = 1000 GB or 1 TiB = 1024 GiB. The workbook currently appears to use 1024 in at least one conversion; confirm the intended convention with the senior and document it.
+
+3. Current default UI values do not appear to match the workbook example values described during review
+Visible Step 2 / Step 3 values include:
+- Initial raw data: 200 TB
+- Daily ingestion: 500 GB/day
+- Annual growth: 20
+- Design horizon: 3 years
+- Cold data share: 34
+- Compression ratio: 6x
+- Worker disks: 8 TB each, 10 disks per worker
+- Worker vCores: 96
+- Worker RAM: 384 GB
+- Replication: 3x
+- EC overhead: 1.5x
+- Temporary/shuffle overhead: 30
+- Maximum disk utilization: 85
+- OS/daemon reservation: 15
+Earlier workbook example values discussed in the review were a 3x compression ratio and 40% cold-data share, and the workbook example was associated with 19 Base workers. The UI screenshot still shows 19 workers, but its displayed required raw disk is about 538.7 TB. These may be intentional altered defaults, but they must be checked against the workbook cells and formulas. Do not assume the 19-worker result alone proves all calculations are correct.
+Action:
+- Build a default-values audit: workbook cell/value, UI default, engine default, and expected output.
+- Make defaults come from one versioned rules/configuration source.
+- Add a visible rules version/source and an indication when values are changed from workbook defaults.
+
+4. Results KPI cards have poor contrast
+In Step 5, the KPI cards have a very light background with very light text, making labels and numbers difficult to read.
+Fix the theme/contrast so text is readable in both light and dark modes. Use an accessible foreground/background combination. Check the Base workers, Base masters, DS workers, and Total planned nodes cards.
+
+5. DS workers show a dash when Base-only is selected
+This can be appropriate because Data Services sizing is not selected, but the UI must explain this clearly.
+- Display “Not calculated — Base-only scope selected” rather than an unexplained dash.
+- If Base + Data Services is selected, require the relevant Data Services inputs and calculate them.
+- Ensure Total planned nodes sums only the included, calculated components and explains what is included.
+
+6. “Data Services capacity” step is effectively empty in Base-only mode
+The screenshot shows a message that DS settings will not affect the final count. That is valid, but the screen could explain the reason and provide a clear path to change scope.
+- Show a concise disabled-state explanation.
+- Link back to Client Configuration to change platform scope.
+- Do not show editable-looking controls that have no effect.
+- If scope is Base + Data Services, show the applicable DS inputs and sizing factors.
+
+7. Results need clearer calculation transparency
+The current result shows Base sizing driver: Memory, installed base raw disk: 1,520 TB, required raw disk: 538.7 TB, and a node inventory.
+Improve results to include:
+- Selected scope and environments.
+- Inputs and units used.
+- Design horizon and year-by-year data forecast.
+- Required storage before/after compression and protection overhead.
+- Storage, CPU, and memory worker counts separately.
+- Minimum-node / erasure-coding constraints where applicable.
+- Final worker count and the reason it was selected (the maximum applicable constraint).
+- Installed raw capacity versus required raw capacity and remaining capacity.
+- Masters and workers as separate roles.
+- Assumptions, warnings, excluded components, and workbook/rules version.
+- Explain whether capacity figures mean raw disk, usable disk, compressed data, or protected storage.
+
+8. Hardware recommendations are incomplete/ambiguous
+The node inventory shows worker hardware values but master sizing says “Size separately” or “See hardware catalog.”
+This may be intentional, but make the limitation explicit in results and exports. Do not imply the hardware bill of materials is complete when masters, Kafka, NiFi, Kudu, HBase, management, security, database, DR, racks, networking, or other services have not been sized.
+
+9. Input labels and ranges need clarification
+Examples include “Annual ingest growth,” “Cold data share (Ozone EC),” “Temp/shuffle overhead,” and “Maximum disk utilization.” Add helper text/tooltips:
+- Unit (%, multiplier, TB, GB, GB/day, vCores, GB RAM).
+- Meaning in plain language.
+- Valid range and whether the value comes from the workbook or user.
+- Whether the value is a percentage (e.g. 20%) or a multiplier (e.g. 1.5x).
+Make sure percentage controls display a percent sign or clearly show the numeric meaning. Avoid ambiguous values such as “34” with no percent sign.
+
+10. No obvious review/confirmation screen before final results
+Add a review step or confirmation section before sizing:
+- Show all selected environments and platform scope.
+- Show all inputs with units.
+- Show any changed assumptions.
+- Show validation warnings.
+- Let the user go back and edit before calculating/exporting.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+B. REQUIREMENTS FOR MAKING ALL DATA DYNAMIC
+
+1. Every input should be data-driven
+Use the current UI state as the single source of truth. No output should remain stale after an input changes. Update all calculations and displays after any relevant input change.
+
+2. Units and conversions
+Provide a unit selector for applicable numeric inputs. Normalize values in the calculation engine, and preserve/display the user's selected units in the UI/report. Define and test GB/TB conversions and rounding policy.
+
+3. Dynamic environment selection
+Support multi-environment selection if confirmed by the senior. Maintain separate environment configurations and outputs, for example:
+- Production: production HA settings and applicable master requirements.
+- UAT: its own workload/capacity requirements.
+- Development: its own workload/capacity requirements.
+- PoC: its own workload/capacity requirements.
+Never add environment node counts together unless the architecture explicitly requires separate clusters. Label whether results represent separate clusters or a shared cluster.
+
+4. Dynamic platform scope
+Base-only and Base + Data Services must change the visible input fields, calculations, results, and total-node count consistently. When Data Services is excluded, show it as not calculated, not zero and not an unexplained dash.
+
+5. Dynamic rules/defaults
+Load workbook-derived factors/defaults from a single configuration/rules module or structured rules file. Avoid duplicating default values across app.py and engine.py. Record a rules version and source for traceability. Keep user-overridden values separate from the baseline rules.
+
+6. Dynamic calculations
+The engine should calculate, not the UI. Recompute:
+- Forecast by design year.
+- Compression and protected storage.
+- Required raw capacity.
+- Storage worker count.
+- CPU worker count.
+- Memory worker count.
+- Minimum/architecture worker count.
+- Final Base worker count and sizing driver.
+- Data Services CPU, memory, block storage, cache, and worker count when in scope.
+- Master counts and total planned nodes based on confirmed architecture rules.
+The final count must respect the rules in the workbook and clearly show the limiting constraint.
+
+7. Dynamic exports
+HTML, JSON, and CSV exports must use the same current input state and calculations shown on screen. Include units, assumptions, selected environments, platform scope, sizing driver, warnings, and rule version. The CSV node inventory should not contain stale or hardcoded node counts.
+
+8. Validation and error handling
+Validate required fields, positive quantities, percentages in allowed ranges, positive compression ratios, valid design horizon, and compatible unit selections. Show understandable errors next to the relevant fields. Do not silently replace invalid values with defaults.
+
+9. Persisted state / navigation
+When the user moves Back/Next, entered values should remain intact. Changing environment or scope should not silently erase values without warning. Use separate state for each environment if multi-environment sizing is implemented.
+
+10. Test coverage
+Add tests for:
+- Workbook example inputs and expected outputs.
+- Unit equivalence (e.g. entering 1 TB versus the equivalent GB amount gives the same normalized result).
+- Environment selection and separate outputs.
+- Base-only versus Base + Data Services scope.
+- Each sizing driver: storage, CPU, memory, and minimum-node constraint.
+- Boundary and invalid values.
+- Export consistency with on-screen results.
+- Regression tests to make sure UI changes do not alter formulas unexpectedly.
+
+C. WORKBOOK-TO-APPLICATION VALIDATION CHECKLIST
+
+Before declaring the UI correct:
+1. Read the README and relevant calculator/factor/planning/hardware sheets.
+2. Identify every input cell used by each calculator.
+3. Record the workbook formula and expected result for each output.
+4. Compare workbook defaults to UI defaults and engine defaults.
+5. Run the same exact input set through Excel and the application.
+6. Compare forecasts, intermediate calculations, worker counts, sizing driver, master counts, and node totals.
+7. Investigate every mismatch. Do not “fix” a mismatch by forcing the expected final worker count.
+8. Verify the 19 Base worker and 13 Data Services worker example outputs only with the exact workbook input set and scope that generated them.
+9. Confirm whether the application should calculate Production and UAT as separate environments or as one shared architecture.
+10. Ask the senior to approve assumptions and scope before using outputs in customer proposals.
+
+D. SUGGESTED PRIORITY
+
+P0 — Correctness and safety:
+- Audit workbook/UI/engine default mismatches.
+- Verify all formulas against the workbook.
+- Make every input update every dependent calculation and export.
+- Fix unreadable result-card contrast.
+- Clarify units and percentage fields.
+- Ensure the sizing driver and total nodes are correct.
+
+P1 — Flexibility:
+- Unit selectors for initial data and daily ingestion.
+- Multi-environment selection with separate result profiles, if approved.
+- Clear Base-only versus Base + Data Services behavior.
+- Editable rules with a visible baseline/reset option.
+
+P2 — Usability and reporting:
+- Input helper text and validation messages.
+- Review/confirmation screen.
+- Clear forecast and calculation breakdown.
+- Consistent HTML/JSON/CSV exports.
+- Better warnings and architecture checklist.
+
+E. ACCEPTANCE CRITERIA
+
+The work is ready for senior review when:
+- Every workbook input required by the calculator is represented in the UI or explicitly documented as a fixed assumption.
+- Changing an input changes the correct calculations and all related outputs.
+- GB/TB and daily-ingestion unit options give equivalent results after conversion.
+- Selecting multiple environments gives clearly separate results or the explicitly approved shared-cluster calculation.
+- Base-only mode does not misleadingly calculate Data Services.
+- Base + Data Services mode calculates both components correctly.
+- Result cards are readable.
+- UI defaults, engine defaults, and workbook defaults are reconciled and documented.
+- Workbook examples pass automated regression tests.
+- Exports exactly match the current screen's calculations.
+- Limitations and unmodeled infrastructure components are clearly stated.
+
+F. QUESTIONS FOR THE SENIOR
+
+1. Should Production, UAT, Development, and PoC be selectable together? If yes, should each get a separate cluster sizing, or should they share infrastructure?
+2. Which input units must be supported: GB/TB, GB/day/TB/day, GB/TiB/GiB/day, or other units?
+3. Should the unit convention use decimal (1000) or binary (1024) conversions?
+4. Which exact workbook cells/values are the approved defaults? The visible UI has 6x compression and 34% cold data, while the earlier example values reviewed were 3x and 40%.
+5. Should the Base and Data Services calculators both be included in the first phase?
+6. Which hardware catalogue and Cloudera version should determine master/worker profiles?
+7. Which components are intentionally excluded from automatic sizing?
+8. Should the user be able to save projects, compare scenarios, and download reports?
+
+FINAL GUIDANCE
+Start by documenting and testing the existing behavior. Do not redesign everything or change formulas blindly. First reconcile workbook formulas and defaults, then fix correctness and dynamic state, then add unit/environment flexibility and improve the results UI. Get senior approval for architecture decisions before treating the results as production sizing.
+
+
+
+
+G. IMPLEMENTATION REVIEW AND BUTTON-BY-BUTTON CHANGE LOG
+Updated: 17 October 2026
+Release: 1.0.0
+
+This section records the implemented behavior using the requested format:
+the issue in the relevant button/control, why it was changed, and what could
+happen if it had not been changed. "If not changed" describes the likely
+user or sizing impact, not a claim that the impact definitely occurred.
+
+1. Sidebar workflow buttons and Back / Next
+- Issue: Users needed to move between workflow steps, correct entries, and
+  keep separate environment inputs without losing values.
+- Why changed: Step navigation and Back / Next move through the six-step
+  workflow while entered values are stored in the app's session state.
+- If not changed: Users could be forced to re-enter inputs or could mistake
+  one environment's values for another's.
+- Status: Implemented. Environment profiles and results are separate.
+
+2. "Environments to size" selector
+- Issue: A single environment selection could not represent a request covering
+  Production, UAT, Development, or PoC together.
+- Why changed: The selector accepts multiple environments and maintains a
+  distinct profile and result for each selected environment.
+- If not changed: Sizing more than one environment would require separate
+  sessions or could incorrectly combine cluster counts.
+- Status: Implemented. Node totals are not combined across environments.
+
+3. "Platform scope" control and Data Services step
+- Issue: In Base-only scope, Data Services controls/results could appear
+  relevant even though they should not affect the calculation.
+- Why changed: Base-only explicitly marks Data Services as not calculated and
+  offers a path back to change scope; Base + Data Services enables its inputs.
+- If not changed: Users could interpret a missing DS result as zero or assume
+  that DS capacity had been included in the total.
+- Status: Implemented. Totals include only the selected and calculated scope.
+
+4. Initial-data and daily-ingest unit selectors
+- Issue: Users entering GB or TB/day values had to convert them themselves,
+  creating opportunities for unit mistakes.
+- Why changed: The selectors accept TB/GB for initial data and GB/day/TB/day
+  for ingest, normalize through the calculation engine, and preserve the
+  selected units for review and reporting.
+- If not changed: A correct numeric value could be interpreted at the wrong
+  scale, resulting in materially inaccurate forecasts and storage sizing.
+- Status: Implemented. The workbook's 1024 GB per TB convention is documented.
+
+5. Peak concurrent workload CPU and memory fields
+- Issue: The fields could be mistaken for per-job or per-server values, or
+  assumed to be automatically inferred from data volume.
+- Why changed: Labels and help explain that vCores and GB RAM are total demand
+  at peak concurrency and drive CPU- and memory-based worker candidates.
+- If not changed: Workload totals could be entered with the wrong meaning, or
+  omitted demand could result in an underestimated worker count.
+- Status: Implemented. Zero/unknown demand produces a caution in the sizing
+  results.
+
+6. "Confirm inputs and calculate" button
+- Issue: Users could reach results without an explicit review of the selected
+  environments, units, assumptions, and validation warnings.
+- Why changed: The review step requires confirmation of the current input
+  signature before results and exports are available; changing inputs makes
+  the prior confirmation stale.
+- If not changed: Results could be shared or exported from unreviewed or
+  outdated inputs.
+- Status: Implemented. Invalid inputs prevent confirmation.
+
+7. "Increase for what-if scenarios (%)" slider
+- Issue: The baseline result alone did not show how increased data or workload
+  demand could affect storage and Base worker sizing.
+- Why changed: Added separate data-only, peak-compute-only, and combined
+  comparisons against the baseline. The slider changes scenario copies only
+  and does not modify the confirmed profile.
+- If not changed: Reviewers would need to alter baseline inputs manually,
+  risking accidental loss of the approved case or inconsistent comparisons.
+- Status: Implemented. Data Services assumptions are held constant and shown
+  for context; scenarios are not statistical forecasts.
+
+8. "Download full calculation (JSON)", "Download node inventory (CSV)", and
+   "Download printable report (HTML)" buttons
+- Issue: Exported results need to match the selected environment, current
+  confirmed inputs, units, rules, warnings, and displayed calculation.
+- Why changed: Exports use the same environment-specific calculation and
+  include relevant units and assumptions; JSON and printable HTML also include
+  the what-if results.
+- If not changed: Teams could circulate stale counts, omit assumptions, or
+  compare reports that do not represent the same input set.
+- Status: Implemented. CSV is a node inventory; HTML is a printable report.
+
+9. "Generate independent AI review" button (optional)
+- Issue: Calculated counts alone may not surface design gaps or missing
+  information for an architecture reviewer.
+- Why changed: The optional AI review can explain risks and missing inputs,
+  while the deterministic sizing engine remains authoritative for node counts.
+- If not changed: Reviewers would have less in-app assistance identifying
+  caveats; the core sizing workflow would still function.
+- Status: Implemented as an optional integration; it requires configured API
+  access and does not change the computed sizing result.
+
+10. App launch after adding the sensitivity feature
+- Issue: The browser displayed an ImportError for calculate_sensitivity while
+  the current engine.py did define and export that function.
+- Why changed: The old Streamlit process had retained a stale imported module;
+  restarting the process caused it to load the updated engine.
+- If not changed: The app would remain on an error page and the new results
+  workflow would be unavailable.
+- Status: Restarted and verified through the app page and health endpoint.
+
+11. Units shown in review and results
+- Issue: Values such as percentages, multipliers, vCores, GB RAM, and raw TB
+  have different meanings; raw capacity can also be mistaken for usable space.
+- Why changed: Labels, help, review tables, results and documentation identify
+  units and explain that disk values are nominal raw capacity.
+- If not changed: Inputs and outputs could be misread, particularly when
+  estimating procurement capacity.
+- Status: Implemented. Hardware and product compatibility still require
+  external/vendor validation.
+
+Verification carried forward for release 1.0.0:
+- Python syntax compilation passed for app.py, engine.py, and test_engine.py.
+- Engine regression tests passed, including sensitivity behavior and
+  validation of the sensitivity percentage.
+- Streamlit UI smoke test passed without app exceptions and showed the
+  sensitivity control and result table.
+- Live app health endpoint returned OK after restarting the stale process.
+
+Items still outside the implemented scope:
+- Persistent project/scenario storage shared between users, authentication and
+  approval history.
+- A validated, version-specific hardware catalog and complete master,
+  networking, rack, DR, management and excluded-service sizing.
+- Benchmark/telemetry ingestion and statistically grounded confidence ranges.
+- Vendor certification: the current application remains a planning estimator.
+
