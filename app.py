@@ -138,7 +138,7 @@ elif p==1:
   field(b,'peak_vcores','Peak concurrent workload CPU demand (vCores)',50,help='Unit: vCores (virtual CPU cores). Enter the total CPU capacity required by the workload at its busiest concurrent period, not per job or per server. The engine uses this value to calculate CPU-driven worker count.',scope=env)
   field(b,'peak_ram','Peak concurrent workload memory demand (GB RAM)',256,help='Unit: GB of RAM. Enter the total memory required by the workload while it is running at peak concurrency, not per job or per server. The engine uses this value to calculate memory-driven worker count.',scope=env)
   percent(b,'cold_share','Cold data share (Ozone EC)',scope=env)
-  field(b,'compression','Expected compression ratio (x)',.5,.1,scope=env)
+  field(b,'compression','Expected compression ratio (%)',.5,.1,scope=env)
  st.warning('Important: vCores and RAM are workload engineering inputs, not inferred automatically from TB. Collect Spark/Impala concurrency, executor sizes and SLAs before approving results.')
  nav()
 elif p==2:
