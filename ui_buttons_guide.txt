@@ -1,0 +1,448 @@
+Cloudera Infrastructure Sizing Studio
+UI Controls Guide — All Pages
+Updated: 21 October 2026
+
+PURPOSE
+Use this guide to understand the buttons and other controls on each page:
+what to enter, what each control does, and whether it is important.
+
+PRIORITY KEY
+- HIGH: Needed for a correct sizing result or to confirm the inputs.
+- MEDIUM: Helps you move around, check work, or prepare a report.
+- OPTIONAL: Helpful extra feature; the main sizing calculation works without it.
+- CONDITIONAL: Important only when the related feature is being sized.
+
+GENERAL TIPS
+- The numbered buttons in the left sidebar open the six main pages.
+- The Back and Next buttons move one step at a time.
+- Number fields often have minus and plus buttons. Minus lowers the value;
+  plus raises it. The amount changed each time depends on that field.
+- Sliders let you choose a value along a line. The number shown above the
+  slider is the value currently selected.
+- Changing inputs can change the estimate. Review and confirm your inputs
+  again before relying on results.
+
+LEFT SIDEBAR — AVAILABLE ON ALL PAGES
+
+1. Client
+- Role: Open the customer and project details page.
+- Priority: HIGH. Choose the environments and platform being sized here.
+
+2. Data & Workload
+- Role: Open the page for data size, growth, and workload requirements.
+- Priority: HIGH. These values affect the capacity estimate.
+
+3. Hardware & Rules
+- Role: Open the page for worker hardware and planning assumptions.
+- Priority: HIGH. These values affect the number of workers.
+
+4. Data Services
+- Role: Open the page for Data Services workloads and worker settings.
+- Priority: CONDITIONAL. Use it when Base + Data Services is selected.
+
+5. Review
+- Role: Open the page that checks the current inputs before calculation.
+- Priority: HIGH. Inputs must pass validation before they can be confirmed.
+
+6. Results & Exports
+- Role: Open the calculated results, details, scenarios, and downloads.
+- Priority: HIGH for viewing the completed estimate. The app requires at
+  least one environment and confirmed, current inputs.
+
+STEP 1 — CLIENT
+
+Environment selector — “Environments to size”
+- Control: Choose one or more environments, such as Production or UAT.
+- Role: Creates a separate sizing profile for each selected environment.
+- Priority: HIGH.
+- Tip: The environments are sized separately. Their node counts are not
+  combined into one shared cluster.
+- If no environment is selected, the app shows an error and disables later
+  sidebar steps.
+
+Customer name
+- Control: Text field.
+- Role: Adds the customer name to the project and reports.
+- Priority: MEDIUM. It labels the estimate but does not determine node counts.
+
+Project / opportunity
+- Control: Text field.
+- Role: Names the project or sales opportunity in the estimate.
+- Priority: MEDIUM. It labels the estimate but does not determine node counts.
+
+Platform scope
+- Control: Select “Base only” or “Base + Data Services”.
+- Role: Chooses whether Data Services should be included in the estimate.
+- Priority: HIGH. This changes which inputs and node counts are included.
+
+Client requirements / architecture notes
+- Control: Large text box.
+- Role: Save free-text information such as workload, SLA, security, or DR
+  needs with the customer profile.
+- Priority: MEDIUM. Notes provide context; they are not automatically used
+  in the sizing formulas.
+
+AI agent expander and customer text box
+- Control: Open the optional AI section and paste a client email, statement
+  of work, or requirements summary.
+- Role: Give the AI helper text to analyze for possible numeric inputs.
+- Priority: OPTIONAL. The normal calculator works without it.
+- Note: The app requires an AI service key to run this feature.
+
+Analyze with AI agent
+- Button role: Analyze the pasted text and show suggested values, notes, and
+  missing information.
+- Priority: OPTIONAL.
+- Note: This creates a preview. It does not change sizing inputs by itself.
+
+Apply non-null extracted numeric inputs
+- Button role: Apply valid numeric suggestions to the Base profile of each
+  selected environment and add suggested notes to the customer notes.
+- Priority: OPTIONAL.
+- Before using it: Check the preview. After applying, review each environment's
+  values before confirming.
+
+Next
+- Button role: Continue to Data & Workload.
+- Priority: HIGH for step-by-step use. At least one environment must be
+  selected first. The sidebar can also open the next page.
+- Note: There is no Back button on the first page.
+
+STEP 2 — DATA & WORKLOAD
+
+Environment profile to edit
+- Control: Choose which selected environment you are editing.
+- Role: Shows and saves Step 2 values for that environment only.
+- Priority: HIGH. Check the selected environment before changing its values.
+
+Initial data unit
+- Control: Choose TB or GB.
+- Role: Sets the unit used by the initial raw data field below it.
+- Priority: HIGH for entering the right amount.
+
+Initial raw data volume
+- Control: Number field with minus/plus buttons.
+- Role: Enter the starting raw data size before future growth.
+- Priority: HIGH. The value and selected unit affect storage forecasts.
+
+Daily ingest unit
+- Control: Choose GB/day or TB/day.
+- Role: Sets the unit used by the daily ingest field below it.
+- Priority: HIGH for entering the right amount.
+
+Daily net-new ingest
+- Control: Number field with minus/plus buttons.
+- Role: Enter how much new data is added each day.
+- Priority: HIGH. This affects the forecast and required storage.
+
+Annual ingest growth
+- Control: Percentage slider.
+- Role: Set the expected yearly increase in data ingestion.
+- Priority: HIGH. A higher value can increase future storage needs.
+
+Design horizon
+- Control: Number field with minus/plus buttons; allowed range is 1 to 5 years.
+- Role: Choose how many years ahead the forecast should cover.
+- Priority: HIGH. A longer horizon can increase required storage.
+
+Peak concurrent workload CPU demand
+- Control: Number field with minus/plus buttons; value is in vCores.
+- Role: Enter the total CPU capacity needed while workloads run at peak
+  concurrency.
+- Priority: HIGH. The app uses it to estimate CPU-driven worker count.
+- Tip: Enter total workload demand, not vCores per job or per server.
+
+Peak concurrent workload memory demand
+- Control: Number field with minus/plus buttons; value is in GB RAM.
+- Role: Enter total memory needed while workloads run at peak concurrency.
+- Priority: HIGH. The app uses it to estimate memory-driven worker count.
+
+Cold data share (Ozone EC)
+- Control: Percentage slider.
+- Role: Set the share of data treated as cold data for the protection
+  calculation.
+- Priority: HIGH. It can change the storage protection estimate.
+
+Expected compression ratio
+- Control: Number field with minus/plus buttons.
+- Role: Enter the expected data compression factor.
+- Priority: HIGH. It changes how much disk space the stored data needs.
+- Important: The current field label includes “(%)”, but the result describes
+  this value as a ratio such as “3x”. Treat it as a compression ratio, not a
+  percentage.
+
+Back
+- Button role: Return to the Client page.
+- Priority: MEDIUM. Use it to change the customer, environment, or scope.
+
+Next
+- Button role: Continue to Hardware & Rules.
+- Priority: HIGH for step-by-step use. The sidebar can also open that page.
+
+STEP 3 — HARDWARE & RULES
+
+Environment profile to edit
+- Control: Choose which selected environment you are editing.
+- Role: Shows and saves hardware and rule values for that environment only.
+- Priority: HIGH. Check the environment before changing assumptions.
+
+Data disk capacity
+- Control: Number field with minus/plus buttons; value is TB per data disk.
+- Role: Set the capacity of one worker data disk.
+- Priority: HIGH. It affects installed storage per worker.
+
+Data disks per worker
+- Control: Number field with minus/plus buttons.
+- Role: Set how many data disks are in each Base worker.
+- Priority: HIGH. It affects each worker's total disk capacity.
+
+Worker vCores (incl. HT)
+- Control: Number field with minus/plus buttons.
+- Role: Set the CPU capacity of one Base worker.
+- Priority: HIGH. It affects CPU-driven worker count.
+
+Worker RAM
+- Control: Number field with minus/plus buttons; value is GB per worker.
+- Role: Set memory capacity of one Base worker.
+- Priority: HIGH. It affects memory-driven worker count.
+
+Minimum worker policy
+- Control: Number field with minus/plus buttons.
+- Role: Set a minimum number of Base workers even if calculated demand is lower.
+- Priority: HIGH. The result will not go below this minimum.
+
+Hot/HDFS replication
+- Control: Number field with minus/plus buttons; value is a multiplier.
+- Role: Set the storage replication factor used for hot data.
+- Priority: HIGH. It affects protected storage requirements.
+
+EC overhead multiplier
+- Control: Number field with minus/plus buttons; value is a multiplier.
+- Role: Set the storage overhead factor for erasure-coded data.
+- Priority: HIGH. It affects protected storage requirements.
+
+Temp/shuffle overhead
+- Control: Percentage slider.
+- Role: Add storage allowance for temporary and shuffle data.
+- Priority: HIGH. It increases the required disk estimate.
+
+Maximum disk utilization
+- Control: Percentage slider.
+- Role: Limit how much of a worker's disk is counted as available for planned
+  data.
+- Priority: HIGH. A lower utilization limit can require more workers.
+
+OS and daemon reservation
+- Control: Percentage slider.
+- Role: Reserve part of the worker resources for the operating system and
+  services.
+- Priority: HIGH. It reduces the resources available to planned workloads.
+
+Production HA for Base masters
+- Control: On/off toggle.
+- Role: Choose whether the Base master plan uses the app's production
+  high-availability setting.
+- Priority: HIGH when production availability is required.
+
+Back
+- Button role: Return to Data & Workload.
+- Priority: MEDIUM. Use it to correct the workload inputs.
+
+Next
+- Button role: Continue to Data Services.
+- Priority: HIGH for step-by-step use. The sidebar can also open that page.
+
+STEP 4 — DATA SERVICES
+
+When “Base only” is selected
+- Message: Explains that Data Services is not calculated and its nodes are
+  not included.
+- Change platform scope in Client Configuration:
+  - Button role: Return to Step 1 to select Base + Data Services if needed.
+  - Priority: CONDITIONAL. Use only if Data Services should be included.
+
+When “Base + Data Services” is selected:
+
+Environment profile to edit
+- Control: Choose which selected environment's Data Services profile to edit.
+- Role: Shows and saves Data Services values for that environment only.
+- Priority: HIGH when Data Services is included.
+
+Service workload table
+- Control: Editable table.
+- Role: Enter the quantity and per-unit CPU, RAM, block storage, and cache
+  needs for each listed service.
+- Priority: HIGH when Data Services is included. These entries determine
+  workload demand.
+- Component and Basis columns are read-only descriptions.
+
+vCores per DS worker
+- Control: Number field with minus/plus buttons.
+- Role: Set CPU capacity for one Data Services worker.
+- Priority: HIGH when sizing Data Services.
+
+RAM per DS worker
+- Control: Number field with minus/plus buttons; value is GB per worker.
+- Role: Set memory capacity for one Data Services worker.
+- Priority: HIGH when sizing Data Services.
+
+Block storage per DS worker
+- Control: Number field with minus/plus buttons; value is GB per worker.
+- Role: Set block storage capacity for one Data Services worker.
+- Priority: HIGH when sizing Data Services.
+
+FAST cache per DS worker
+- Control: Number field with minus/plus buttons; value is GB per worker.
+- Role: Set cache capacity for one Data Services worker.
+- Priority: HIGH when sizing Data Services.
+
+Control Plane reserved block per host
+- Control: Number field with minus/plus buttons; value is GB per host.
+- Role: Reserve block storage for the Data Services control plane.
+- Priority: HIGH when sizing Data Services.
+
+Minimum DS workers
+- Control: Number field with minus/plus buttons.
+- Role: Set the minimum Data Services worker count.
+- Priority: HIGH when sizing Data Services.
+
+Kubernetes / OS overhead
+- Control: Percentage slider.
+- Role: Reserve capacity for Kubernetes and the operating system.
+- Priority: HIGH when sizing Data Services.
+
+Scaling headroom
+- Control: Percentage slider.
+- Role: Keep extra capacity for future growth or demand changes.
+- Priority: HIGH when sizing Data Services.
+
+Production HA for DS masters
+- Control: On/off toggle.
+- Role: Choose whether the Data Services master plan uses the app's
+  production high-availability setting.
+- Priority: HIGH when production availability is required.
+
+Back
+- Button role: Return to Hardware & Rules.
+- Priority: MEDIUM. Use it to correct Base hardware or planning assumptions.
+
+Next
+- Button role: Continue to Review and confirm.
+- Priority: HIGH for step-by-step use. The sidebar can also open Review.
+
+STEP 5 — REVIEW AND CONFIRM
+
+Environment tabs
+- Control: Choose an environment tab to inspect that environment's inputs and
+  validation result.
+- Role: Keep each environment's review separate.
+- Priority: HIGH. Check every environment you plan to size.
+
+Input tables and changed-default messages
+- Role: Show the entered values, units, and whether values differ from the
+  workbook example defaults.
+- Priority: HIGH. These are for checking; edit values on the earlier pages.
+
+Validation messages and warnings
+- Role: Explain invalid values or sizing warnings that should be considered.
+- Priority: HIGH. Correct invalid inputs before confirming.
+
+Back
+- Button role: Return to Data Services so you can make changes.
+- Priority: MEDIUM. The sidebar can also open an earlier step.
+
+Confirm inputs and calculate
+- Button role: Save a confirmation of the current inputs and open Results.
+- Priority: HIGH. This is the required final step before using results and
+  downloads.
+- Note: It is disabled if any selected environment has invalid sizing inputs.
+  If an input changes after confirmation, review and confirm again.
+
+STEP 6 — RESULTS & EXPORTS
+
+Environment tabs
+- Control: Choose which selected environment's results to view.
+- Role: Show one separate cluster estimate at a time.
+- Priority: HIGH. Confirm you are looking at the intended environment.
+
+Result section tabs
+- Summary: Read the main result and node inventory.
+- Calculation breakdown: Inspect the forecast and sizing math.
+- Architecture & checks: Review warnings and sign-off checklist.
+- What-if scenarios: Explore example increases without changing baseline
+  inputs.
+- Exports & assumptions: Download files and review assumptions.
+- Priority: MEDIUM for navigation; use the sections needed for your review.
+
+Result cards
+- Display: Base workers, Base masters, Data Services workers, and total nodes
+  for the current environment.
+- Role: Give a quick summary of the estimate.
+- Priority: HIGH for a quick overview.
+- Note: In Base-only scope, Data Services says it was not calculated.
+
+Summary tab
+- Role: Show the customer/project, scope, sizing driver, storage capacity,
+  inputs, and preliminary node inventory.
+- Priority: HIGH for understanding the main result.
+- Note: Some hardware roles and infrastructure components need separate
+  review; the estimate is not a complete procurement list.
+
+Calculation breakdown tab
+- Role: Show the forecast, storage formula, worker counts by constraint, and
+  Data Services breakdown when included.
+- Priority: HIGH when checking how the app reached its estimate.
+
+Architecture & checks tab
+- Role: Show a logical architecture, warnings, and a checklist of items to
+  confirm before sign-off.
+- Priority: HIGH before using the estimate for a real design.
+- Checklist boxes:
+  - Control: Mark a review item as checked.
+  - Role: Help track that a human reviewer considered the item.
+  - Priority: HIGH for project review, but checking a box does not change or
+    validate the sizing calculation.
+
+What-if scenarios tab
+- Increase for what-if scenarios
+  - Control: Percentage slider.
+  - Role: Choose how much to increase Base data and/or workload demand in
+    example scenarios.
+  - Priority: OPTIONAL. It does not change confirmed baseline inputs.
+- Scenario results table
+  - Role: Compare data-only, compute-only, and combined scenarios.
+  - Priority: OPTIONAL. Use it to explore possible increases.
+
+Exports & assumptions tab
+- Download full calculation (JSON)
+  - Role: Download detailed inputs and calculated results for the current
+    environment in JSON format.
+  - Priority: MEDIUM. Useful for records or other software.
+- Download node inventory (CSV)
+  - Role: Download the node list and related sizing details in a format that
+    spreadsheet tools can open.
+  - Priority: MEDIUM. Useful for planning and review.
+- Download printable report (HTML)
+  - Role: Download a readable report for printing or sharing.
+  - Priority: MEDIUM. Includes the current environment's result and supporting
+    information.
+- Generate independent AI review
+  - Role: Ask AI to explain possible architecture risks or missing details.
+  - Priority: OPTIONAL. It does not change the calculations or node counts.
+  - Note: Requires an AI service key.
+
+Review current inputs
+- Button role: Return to Review if the inputs no longer match the last
+  confirmation.
+- Priority: HIGH when shown. Review and confirm the changed inputs before
+  relying on results or downloads.
+
+Back
+- Button role: Return to Review and confirm.
+- Priority: MEDIUM. There is no Next button on the final page.
+
+IMPORTANT
+This application provides planning estimates, not a final hardware order.
+Have the Cloudera version, workload, hardware, licensing, network, high
+availability, and disaster recovery plan checked by the appropriate experts
+before procurement.
