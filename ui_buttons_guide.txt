@@ -167,8 +167,7 @@ Expected compression ratio
 - Control: Number field with minus/plus buttons.
 - Role: Enter the expected data compression factor.
 - Priority: HIGH. It changes how much disk space the stored data needs.
-- Important: The current field label includes “(%)”, but the result describes
-  this value as a ratio such as “3x”. Treat it as a compression ratio, not a
+- The field is labeled “(x)” because this is a multiplier, such as 3x, not a
   percentage.
 
 Back

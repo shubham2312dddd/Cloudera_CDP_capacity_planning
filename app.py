@@ -13,6 +13,14 @@ div[data-testid="stMetric"]{background:var(--secondary-background-color);color:v
 div[data-testid="stMetricLabel"],div[data-testid="stMetricValue"],div[data-testid="stMetricDelta"]{color:var(--text-color)!important}
 div.stButton>button[kind="primary"]{background:#174b78;border-radius:8px;border:none}
 div[data-testid="stSidebar"]{background:var(--secondary-background-color)}.caption{color:var(--text-color);font-size:13px}.step{padding:13px;background:var(--secondary-background-color);border-left:4px solid #174b78;border-radius:8px}
+[data-testid="stMain"]:has(.first-four-page-scope) :is([data-testid="stWidgetLabel"],[data-testid="stMarkdownContainer"]) [data-testid="stTooltipIcon"] > [data-testid="stTooltipHoverTarget"] > button{position:relative;color:inherit!important}
+[data-testid="stMain"]:has(.first-four-page-scope) :is([data-testid="stWidgetLabel"],[data-testid="stMarkdownContainer"]) [data-testid="stTooltipIcon"] > [data-testid="stTooltipHoverTarget"] > button svg{visibility:hidden}
+[data-testid="stMain"]:has(.first-four-page-scope) :is([data-testid="stWidgetLabel"],[data-testid="stMarkdownContainer"]) [data-testid="stTooltipIcon"] > [data-testid="stTooltipHoverTarget"] > button::after{content:"i";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border:1px solid currentColor;border-radius:50%;font:600 10px/1 Arial,sans-serif;color:currentColor;opacity:.75;pointer-events:none}
+[data-testid="stMain"]:has(.first-four-page-scope) [data-testid="stWidgetLabel"]>div{flex:0 0 auto!important;width:auto!important}
+[data-testid="stMain"]:has(.first-four-page-scope) :is([data-testid="stWidgetLabel"],[data-testid="stMarkdownContainer"]) [data-testid="stTooltipIcon"] > [data-testid="stTooltipHoverTarget"] > button:hover::after,[data-testid="stMain"]:has(.first-four-page-scope) :is([data-testid="stWidgetLabel"],[data-testid="stMarkdownContainer"]) [data-testid="stTooltipIcon"] > [data-testid="stTooltipHoverTarget"] > button:focus-visible::after{color:#4da3ff;border-color:#4da3ff;opacity:1}
+div[data-testid="stMarkdown"]:has(.first-four-page-scope){display:none!important}
+[data-testid="stMain"] .ui-info{position:relative;display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;margin-left:5px;border:1px solid currentColor;border-radius:50%;font:600 10px/1 Arial,sans-serif;vertical-align:middle;cursor:help}
+[data-testid="stMain"] .ui-info:hover,[data-testid="stMain"] .ui-info:focus{color:#4da3ff;border-color:#4da3ff;outline:none}
 </style>''',unsafe_allow_html=True)
 if 'base' not in st.session_state:st.session_state.base=default_base()
 if 'ds' not in st.session_state:st.session_state.ds=default_ds()
@@ -38,6 +46,53 @@ for key in ('edit_environment_data','edit_environment_hardware','edit_environmen
  if key in st.session_state and st.session_state[key] not in st.session_state.client['environments']:
   st.session_state[key]=st.session_state.client['environments'][0]
 STEPS=['1 · Client','2 · Data & Workload','3 · Hardware & Rules','4 · Data Services','5 · Review','6 · Results & Exports']
+FIELD_HELP={
+ 'initial_data':'Starting raw data size before future growth. The selected unit is used for this environment.',
+ 'daily_ingest':'Amount of new raw data added each day. The selected unit is used for this environment.',
+ 'growth':'Unit: %. Set the expected yearly increase in new data ingestion. A higher value increases the forecast data and storage requirement. Valid range: 0 to 300%.',
+ 'years':'Number of years included in the data forecast. Choose a whole number from 1 to 5.',
+ 'peak_vcores':'Unit: vCores (virtual CPU cores). Enter the total CPU capacity required by the workload at its busiest concurrent period, not per job or per server. The engine uses this value to calculate CPU-driven worker count.',
+ 'peak_ram':'Unit: GB of RAM. Enter the total memory required by the workload while it is running at peak concurrency, not per job or per server. The engine uses this value to calculate memory-driven worker count.',
+ 'cold_share':'Unit: %. Set the share of data treated as cold data for the Ozone erasure-coding protection calculation. This changes the weighted protection estimate between replication and erasure-coding overhead. Valid range: 0 to 100%.',
+ 'compression':'Expected compression ratio as a multiplier (for example, 3 means 3x). This is not a percentage. Minimum: 0.1x.',
+ 'disk_tb':'Nominal capacity of one worker data disk, in TB.',
+ 'disks_per_worker':'Number of data disks installed in each Base worker.',
+ 'worker_vcores':'CPU capacity of one Base worker, including hyper-threading as represented by the hardware profile.',
+ 'worker_ram':'Memory capacity of one Base worker, in GB.',
+ 'replication':'Hot/HDFS storage replication multiplier used to estimate protected storage.',
+ 'ec_overhead':'Storage overhead multiplier used for erasure-coded cold data.',
+ 'scratch':'Unit: %. Add this temporary and shuffle storage allowance to required disk. A higher value increases the disk estimate. Valid range: 0 to 100%.',
+ 'utilization':'Unit: %. Set the maximum share of each worker disk counted as available for planned data. Lower values leave more free space and can require more workers. Valid range: 1 to 100%.',
+ 'reservation':'Unit: %. Reserve this share of each Base worker’s CPU and RAM for the operating system and daemons. A higher value reduces resources available to the workload and can increase worker count. Valid range: 0 to 99%.',
+ 'vcores':'CPU capacity of one Data Services worker, in vCores.',
+ 'ram':'Memory capacity of one Data Services worker, in GB.',
+ 'block':'Block storage capacity of one Data Services worker, in GB.',
+ 'cache':'FAST cache capacity of one Data Services worker, in GB.',
+ 'block_reserve':'Block storage reserved for the Data Services control plane on each host, in GB.',
+ 'min_workers_base':'Minimum number of Base workers to plan, even if calculated demand is lower.',
+ 'min_workers_ds':'Minimum number of Data Services workers to plan, even if calculated demand is lower.',
+ 'os_overhead':'Unit: %. Reserve this share of Data Services worker CPU and RAM for Kubernetes and the operating system. A higher value reduces resources available to workload demand and can increase worker count. Valid range: 0 to 99%.',
+ 'headroom':'Unit: %. Add this scaling allowance to Data Services CPU, RAM, and block-storage demand when calculating worker count. A higher value can increase the required workers. Valid range: 0 to 100%.',
+ 'sensitivity':'Percent increase applied to Base data and/or peak workload in the what-if cases. It does not change confirmed inputs; Data Services workload and hardware stay fixed.',
+}
+BUTTON_HELP={
+ 'Analyze with AI agent':'Read the pasted client requirements and show suggested numeric values, notes, and missing information. This creates a preview and does not change sizing inputs.',
+ 'Apply non-null extracted numeric inputs':'Copy valid extracted numeric values into every selected environment’s Base profile and add the extracted notes to the customer notes. Check the preview first, then review the profiles.',
+ 'Change platform scope in Client Configuration':'Return to Client to choose whether the estimate includes Data Services.',
+ '← Back':'Return to the previous workflow step so you can review or edit earlier information.',
+ 'Next →':'Continue to the next workflow step. Your current profile values remain saved.',
+ '← Back (review)':'Return to Data Services to make changes before confirming.',
+ 'Confirm inputs and calculate →':'Confirm the current, validated inputs and open the sizing results. If inputs change later, review and confirm them again.',
+ 'Review current inputs':'Return to Review because the current inputs differ from the last confirmed version.',
+ '⬇ Download full calculation (JSON)':'Download detailed inputs, results, assumptions, warnings, and rule information for this environment as JSON.',
+ '⬇ Download node inventory (CSV)':'Download this environment’s node inventory and sizing details in a spreadsheet-friendly CSV file.',
+ '⬇ Download printable report (HTML)':'Download a readable report for this environment, including results and supporting details.',
+ 'Generate independent AI review':'Ask the optional AI helper to explain possible architecture risks or missing information. It does not change sizing calculations or node counts.',
+}
+def legacy_info_icon(text):
+ escaped=html.escape(text,quote=True)
+ return f'<span class="ui-info" tabindex="0" role="img" aria-label="More information: {escaped}" title="{escaped}">i</span>'
+
 with st.sidebar:
  st.title('🧭 Sizing Studio')
  st.caption('Cloudera Private Cloud • workbook-backed reference calculations')
@@ -51,29 +106,35 @@ with st.sidebar:
 
 st.title('Cloudera Infrastructure Sizing Studio')
 st.caption('A guided client-to-sizing workflow with transparent, reproducible formulas and architectural checks.')
+if st.session_state.step<4:
+ st.markdown('<span class="first-four-page-scope"></span>',unsafe_allow_html=True)
+else:
+ st.markdown('Workflow progress'+legacy_info_icon('Shows where you are in the six-step sizing process.'),unsafe_allow_html=True)
 st.progress((st.session_state.step+1)/len(STEPS))
 
 def field(obj,key,label,step=None,min_value=0.,help=None,scope='',max_value=None):
  val=obj[key]
  widget_key=f'f_{key}_{st.session_state.step}_{scope}'
- if isinstance(val,int):obj[key]=st.number_input(label,min_value=int(min_value),max_value=int(max_value) if max_value is not None else None,value=int(val),step=int(step or 1),help=help,key=widget_key)
- else:obj[key]=st.number_input(label,min_value=float(min_value),max_value=float(max_value) if max_value is not None else None,value=float(val),step=float(step or .1),help=help,key=widget_key)
+ tooltip=help or FIELD_HELP.get(f'{key}_{scope.rsplit("_",1)[-1]}',FIELD_HELP.get(key))
+ if tooltip:tooltip+=' Use the minus and plus controls to lower or raise the value.'
+ if isinstance(val,int):obj[key]=st.number_input(label,min_value=int(min_value),max_value=int(max_value) if max_value is not None else None,value=int(val),step=int(step or 1),help=tooltip,key=widget_key)
+ else:obj[key]=st.number_input(label,min_value=float(min_value),max_value=float(max_value) if max_value is not None else None,value=float(val),step=float(step or .1),help=tooltip,key=widget_key)
 def percent(obj,key,label,maximum=100,minimum=0,scope=''):
- obj[key]=st.slider(f'{label} (%)',minimum,maximum,int(obj[key]*100),help='Enter a percentage; the sizing engine converts it to a fraction.',key=f'p_{key}_{st.session_state.step}_{scope}')/100
+ obj[key]=st.slider(f'{label} (%)',minimum,maximum,int(obj[key]*100),help=FIELD_HELP.get(key,'Enter a percentage; the sizing engine converts it to a fraction.'),key=f'p_{key}_{st.session_state.step}_{scope}')/100
 
 def unit_input(label,value,unit,units,environment,name):
  conversion=1 if unit==units[0] else (GB_PER_TB if name=='daily_ingest' else 1/GB_PER_TB)
  displayed=value/conversion
  key=f'{name}_{environment}_{unit}_{displayed:.10g}'
- entered=st.number_input(f'{label} ({unit})',min_value=0.0,value=float(displayed),step=1.0,key=key)
+ entered=st.number_input(f'{label} ({unit})',min_value=0.0,value=float(displayed),step=1.0,help=f'{FIELD_HELP[name]} Use the minus and plus controls to lower or raise the value.',key=key)
  return entered
 
 def nav():
  a,b,c=st.columns([1,5,1]);
  with a:
-  if st.session_state.step>0 and st.button('← Back'):st.session_state.step-=1;st.rerun()
+  if st.session_state.step>0 and st.button('← Back',help=BUTTON_HELP['← Back']):st.session_state.step-=1;st.rerun()
  with c:
-  if st.session_state.step<len(STEPS)-1 and st.button('Next →',type='primary'):st.session_state.step+=1;st.rerun()
+  if st.session_state.step<len(STEPS)-1 and st.button('Next →',type='primary',help=BUTTON_HELP['Next →']):st.session_state.step+=1;st.rerun()
 
 p=st.session_state.step;c=st.session_state.client
 def current_signature():
@@ -82,7 +143,7 @@ def current_signature():
 if p==0:
  st.subheader('Step 1 · Customer profile')
  st.markdown('Capture the customer, select one or more environments, and choose which infrastructure layers to size. Every environment is sized as a separate cluster.')
- selected_environments=st.multiselect('Environments to size',ENVIRONMENTS,default=c['environments'],key='selected_environments')
+ selected_environments=st.multiselect('Environments to size',ENVIRONMENTS,default=c['environments'],help='Select one or more environments. Each environment gets its own saved inputs and separate cluster results; node counts are not combined.',key='selected_environments')
  if selected_environments:
   c['environments']=selected_environments
   st.session_state.environment_selection_valid=True
@@ -92,14 +153,16 @@ if p==0:
   st.error('Select at least one environment before continuing.')
  c1,c2=st.columns(2)
  with c1:
-  c['name']=st.text_input('Customer name',c['name']);c['project']=st.text_input('Project / opportunity',c['project'])
+  c['name']=st.text_input('Customer name',c['name'],help='Customer name shown in the project summary and downloaded reports.')
+  c['project']=st.text_input('Project / opportunity',c['project'],help='Project or opportunity name shown in the estimate and reports.')
  with c2:
-  c['platform']=st.radio('Platform scope',['Base only','Base + Data Services'],index=0 if c['platform']=='Base only' else 1)
-  c['notes']=st.text_area('Client requirements / architecture notes',c['notes'],height=138,placeholder='Workloads, SLA, latency, compliance, DR, security...')
+  c['platform']=st.radio('Platform scope',['Base only','Base + Data Services'],index=0 if c['platform']=='Base only' else 1,help='Choose whether to calculate Base only or include Data Services. This controls which inputs and node counts are included.')
+  c['notes']=st.text_area('Client requirements / architecture notes',c['notes'],height=138,placeholder='Workloads, SLA, latency, compliance, DR, security...',help='Save context such as workload, SLA, security, or disaster recovery needs. These notes are not automatically used in sizing formulas.')
+ st.markdown('Optional AI helper',help='Expand the AI section to paste client requirements, preview extracted values, and optionally apply valid numeric suggestions. The main sizing workflow works without AI.')
  with st.expander('✨ AI agent — extract requirements from customer notes (optional)',expanded=False):
-  raw=st.text_area('Paste an email, statement of work or client requirement summary',key='raw_requirements',height=135)
+  raw=st.text_area('Paste an email, statement of work or client requirement summary',key='raw_requirements',height=135,help='Optional: provide customer text for AI extraction. Review all suggested values before applying them.')
   st.caption('Requires OPENAI_API_KEY on the server. Values are previewed before adoption; nothing is guessed for missing numbers.')
-  if st.button('Analyze with AI agent'):
+  if st.button('Analyze with AI agent',help=BUTTON_HELP['Analyze with AI agent']):
    try:
     mapped,notes,missing=extract_requirements(raw)
     st.session_state.ai_candidate={'mapped':mapped,'notes':notes,'missing':missing}
@@ -107,7 +170,7 @@ if p==0:
   if 'ai_candidate' in st.session_state:
    a=st.session_state.ai_candidate
    st.json(a)
-   if st.button('Apply non-null extracted numeric inputs'):
+   if st.button('Apply non-null extracted numeric inputs',help=BUTTON_HELP['Apply non-null extracted numeric inputs']):
     for env in c['environments']:
      target=st.session_state.profiles[env]['base']
      for k,v in a['mapped'].items():
@@ -123,14 +186,14 @@ if p==0:
 elif p==1:
  st.subheader('Step 2 · Data volumes and workload capacity')
  st.markdown('These map to **Base - Calculator** input rows 5–13 and 22–23.')
- env=st.selectbox('Environment profile to edit',c['environments'],key='edit_environment_data')
+ env=st.selectbox('Environment profile to edit',c['environments'],help='Choose which environment’s separate Data & Workload profile you want to edit.',key='edit_environment_data')
  profile=st.session_state.profiles[env];b=profile['base'];units=profile['units']
  st.caption(f'Editing the separate **{env}** cluster profile.')
  x,y=st.columns(2)
  with x:
-  units['initial']=st.selectbox('Initial data unit',['TB','GB'],index=['TB','GB'].index(units['initial']),key=f'initial_unit_{env}')
+  units['initial']=st.selectbox('Initial data unit',['TB','GB'],index=['TB','GB'].index(units['initial']),help='Choose the unit for initial raw data. The app converts the entered value for sizing using the workbook’s 1024 GB per TB rule.',key=f'initial_unit_{env}')
   b['initial_tb']=normalize_initial_data(unit_input('Initial raw data volume',b['initial_tb'],units['initial'],['TB','GB'],env,'initial_data'),units['initial'])
-  units['daily']=st.selectbox('Daily ingest unit',['GB/day','TB/day'],index=['GB/day','TB/day'].index(units['daily']),key=f'daily_unit_{env}')
+  units['daily']=st.selectbox('Daily ingest unit',['GB/day','TB/day'],index=['GB/day','TB/day'].index(units['daily']),help='Choose the unit for daily new data. The app converts the entered value for sizing using the workbook’s 1024 GB per TB rule.',key=f'daily_unit_{env}')
   b['daily_gb']=normalize_daily_ingest(unit_input('Daily net-new ingest',b['daily_gb'],units['daily'],['GB/day','TB/day'],env,'daily_ingest'),units['daily'])
   percent(b,'growth','Annual ingest growth',maximum=300,scope=env)
   field(b,'years','Design horizon (years, 1–5)',1,1,scope=env,max_value=5)
@@ -138,13 +201,13 @@ elif p==1:
   field(b,'peak_vcores','Peak concurrent workload CPU demand (vCores)',50,help='Unit: vCores (virtual CPU cores). Enter the total CPU capacity required by the workload at its busiest concurrent period, not per job or per server. The engine uses this value to calculate CPU-driven worker count.',scope=env)
   field(b,'peak_ram','Peak concurrent workload memory demand (GB RAM)',256,help='Unit: GB of RAM. Enter the total memory required by the workload while it is running at peak concurrency, not per job or per server. The engine uses this value to calculate memory-driven worker count.',scope=env)
   percent(b,'cold_share','Cold data share (Ozone EC)',scope=env)
-  field(b,'compression','Expected compression ratio (%)',.5,.1,scope=env)
+  field(b,'compression','Expected compression ratio (x)',.5,.1,scope=env)
  st.warning('Important: vCores and RAM are workload engineering inputs, not inferred automatically from TB. Collect Spark/Impala concurrency, executor sizes and SLAs before approving results.')
  nav()
 elif p==2:
  st.subheader('Step 3 · Hardware and planning-rule settings')
  st.markdown('Editable workbook defaults. Keep these as **versioned rules/assumptions**, not immutable agent prompts.')
- env=st.selectbox('Environment profile to edit',c['environments'],key='edit_environment_hardware')
+ env=st.selectbox('Environment profile to edit',c['environments'],help='Choose which environment’s hardware and planning assumptions you want to edit.',key='edit_environment_hardware')
  profile=st.session_state.profiles[env];b=profile['base']
  d=profile['ds']
  st.caption(f'Editing the separate **{env}** cluster profile.')
@@ -155,7 +218,7 @@ elif p==2:
   field(b,'disks_per_worker','Data disks per worker',1,scope=env)
   field(b,'worker_vcores','Worker vCores (incl. HT)',8,scope=env)
   field(b,'worker_ram','Worker RAM (GB)',32,scope=env)
-  field(b,'min_workers','Minimum worker policy',1,1,scope=env)
+  field(b,'min_workers','Minimum worker policy',1,1,scope=f'{env}_base')
  with y:
   st.markdown('#### Protection & utilization')
   field(b,'replication','Hot/HDFS replication (x)',1,1,scope=env)
@@ -163,24 +226,32 @@ elif p==2:
   percent(b,'scratch','Temp/shuffle overhead',scope=env)
   percent(b,'utilization','Maximum disk utilization',minimum=1,scope=env)
   percent(b,'reservation','OS and daemon reservation',maximum=99,scope=env)
- b['ha']=st.toggle('Production HA for Base masters',value=b['ha'],key=f'base_ha_{env}')
+ b['ha']=st.toggle('Production HA for Base masters',value=b['ha'],help='Enable the app’s production high-availability master setting. Confirm the actual master architecture for your Cloudera version.',key=f'base_ha_{env}')
  st.caption('Current workbook storage formula: compressed bytes × weighted protection × (1 + scratch) ÷ disk utilization.')
  nav()
 elif p==3:
  st.subheader('Step 4 · Data Services capacity')
  if c['platform']=='Base only':
   st.info('Data Services is not calculated because the selected platform scope is Base only. No Data Services inputs are active and no DS nodes are included in the total.')
-  if st.button('Change platform scope in Client Configuration'):
+  if st.button('Change platform scope in Client Configuration',help=BUTTON_HELP['Change platform scope in Client Configuration']):
    st.session_state.step=0
    st.rerun()
  else:
-  env=st.selectbox('Environment profile to edit',c['environments'],key='edit_environment_ds')
+  env=st.selectbox('Environment profile to edit',c['environments'],help='Choose which environment’s Data Services profile you want to edit.',key='edit_environment_ds')
   profile=st.session_state.profiles[env];d=profile['ds']
   services=profile['services']
   st.caption(f'Editing the separate **{env}** cluster profile.')
-  st.markdown('Each row models a workload component. **Quantity and per-unit assumptions are editable**. Defaults come from the supplied DS Calculator.')
+  st.markdown('Each row models a workload component. **Quantity and per-unit assumptions are editable**. Defaults come from the supplied DS Calculator.',help='Enter each service quantity and its per-unit CPU, RAM, block storage, and cache needs. Hover each column heading for its unit and meaning. The table toolbar lets you search rows, hide columns, download a CSV, or open the table fullscreen. Component and Basis columns are read-only.')
   df=pd.DataFrame(services,columns=['Component','Quantity','vCores / unit','RAM GB / unit','Block GB / unit','Cache GB / unit','Basis'])
-  updated=st.data_editor(df,hide_index=True,use_container_width=True,num_rows='fixed',disabled=['Component','Basis'],column_config={'Quantity':st.column_config.NumberColumn(min_value=0,step=1),'vCores / unit':st.column_config.NumberColumn(min_value=0),'RAM GB / unit':st.column_config.NumberColumn(min_value=0),'Block GB / unit':st.column_config.NumberColumn(min_value=0),'Cache GB / unit':st.column_config.NumberColumn(min_value=0)},key=f'ds_editor_{env}')
+  updated=st.data_editor(df,hide_index=True,use_container_width=True,num_rows='fixed',disabled=['Component','Basis'],column_config={
+   'Component':st.column_config.TextColumn(help='Name of the Data Services workload component. This description is fixed.'),
+   'Quantity':st.column_config.NumberColumn(min_value=0,step=1,help='Number of instances, jobs, sessions, or other units of this workload.'),
+   'vCores / unit':st.column_config.NumberColumn(min_value=0,help='CPU demand in vCores for each unit of this workload.'),
+   'RAM GB / unit':st.column_config.NumberColumn(min_value=0,help='Memory demand in GB for each unit of this workload.'),
+   'Block GB / unit':st.column_config.NumberColumn(min_value=0,help='Block storage demand in GB for each unit of this workload.'),
+   'Cache GB / unit':st.column_config.NumberColumn(min_value=0,help='FAST cache demand in GB for each unit of this workload.'),
+   'Basis':st.column_config.TextColumn(help='Reference or assumption used for this workload row. This description is fixed.'),
+  },key=f'ds_editor_{env}')
   profile['services']=updated.values.tolist()
   st.markdown('#### Kubernetes/ECS worker profile')
   x,y=st.columns(2)
@@ -191,10 +262,10 @@ elif p==3:
    field(d,'cache','FAST cache per DS worker (GB)',100,scope=env)
   with y:
    field(d,'block_reserve','Control Plane reserved block per host (GB)',128,scope=env)
-   field(d,'min_workers','Minimum DS workers',1,1,scope=env)
+   field(d,'min_workers','Minimum DS workers',1,1,scope=f'{env}_ds')
    percent(d,'os_overhead','Kubernetes / OS overhead',maximum=99,scope=env)
    percent(d,'headroom','Scaling headroom',scope=env)
-  d['ha']=st.toggle('Production HA for DS masters',value=d['ha'],key=f'ds_ha_{env}')
+  d['ha']=st.toggle('Production HA for DS masters',value=d['ha'],help='Enable the app’s production high-availability setting for Data Services masters. Confirm the actual architecture before procurement.',key=f'ds_ha_{env}')
  nav()
 elif p==4:
  st.subheader('Step 5 · Review and confirm')
@@ -242,20 +313,21 @@ elif p==4:
     ready=False
  back_col,confirm_col=st.columns([1,5])
  with back_col:
-  if st.button('← Back',key='review_back'):st.session_state.step=3;st.rerun()
+  if st.button('← Back',key='review_back',help=BUTTON_HELP['← Back (review)']):st.session_state.step=3;st.rerun()
  with confirm_col:
-  if st.button('Confirm inputs and calculate →',type='primary',disabled=not ready,key='confirm_current_inputs'):
+  if st.button('Confirm inputs and calculate →',type='primary',disabled=not ready,key='confirm_current_inputs',help=BUTTON_HELP['Confirm inputs and calculate →']):
    st.session_state.confirmed_signature=current_signature()
    st.session_state.step=5
    st.rerun()
 else:
  if st.session_state.get('confirmed_signature')!=current_signature():
    st.warning('The current inputs have not been confirmed. Review them before calculating or exporting results.')
-   if st.button('Review current inputs'):
+   if st.button('Review current inputs',help=BUTTON_HELP['Review current inputs']):
     st.session_state.step=4
     st.rerun()
    st.stop()
  st.subheader('Step 6 · Final infrastructure sizing')
+ st.markdown('Environment results'+legacy_info_icon('Choose an environment tab to view that environment’s separate cluster estimate. Environment node counts are not combined.'),unsafe_allow_html=True)
  environment_tabs=st.tabs(c['environments'])
  for env,environment_tab in zip(c['environments'],environment_tabs):
   with environment_tab:
@@ -268,9 +340,13 @@ else:
     continue
    st.success(f'{env} is sized as a separate cluster. Counts are not combined with other environments.')
    m1,m2,m3,m4=st.columns(4)
-   m1.metric('Base workers',base['workers']);m2.metric('Base masters',base['masters']);m3.metric('DS workers',ds['workers'] if ds else 'Not calculated');m4.metric('Total nodes in this cluster',base['total_nodes']+(ds['total_nodes'] if ds else 0))
+   m1.metric('Base workers',base['workers'],help='Base worker count selected from storage, CPU, memory, and policy constraints.')
+   m2.metric('Base masters',base['masters'],help='Estimated Base master count under the selected high-availability setting and workbook rules.')
+   m3.metric('DS workers',ds['workers'] if ds else 'Not calculated',help='Data Services worker count when included. In Base-only scope, Data Services is excluded, not sized as zero.')
+   m4.metric('Total nodes in this cluster',base['total_nodes']+(ds['total_nodes'] if ds else 0),help='Total nodes in this environment only. Includes Base and, when selected, Data Services workers and masters.')
    if ds is None:st.caption('Data Services: Not calculated — Base-only scope selected.')
    st.caption('This total covers only this environment: Base workers and masters'+(' plus Data Services workers and masters.' if ds else '.'))
+   st.markdown('Result sections'+legacy_info_icon('Use Summary for the main estimate, Calculation breakdown for the sizing math, Architecture & checks for warnings and sign-off items, What-if scenarios to test increases, and Exports & assumptions to download reports.'),unsafe_allow_html=True)
    t1,t2,t3,t5,t4=st.tabs(['Summary','Calculation breakdown','Architecture & checks','What-if scenarios','Exports & assumptions'])
    with t1:
     st.markdown(f"### {c['name']} — {c['project']} — {env}")
@@ -312,11 +388,11 @@ else:
     for warning in warnings_list:st.warning(warning)
     st.markdown('#### Mandatory review before sign-off')
     for item in ['Confirm Cloudera product/version support matrix and actual architecture','Confirm workload concurrency and benchmark-derived CPU/RAM requirements','Model Kafka, NiFi, Kudu, HBase, Ranger, Atlas, management and external DB hosts separately','Confirm rack/availability zones, network, recovery/RPO/RTO and DR sizing','Confirm hot/cold storage layout, filesystem block size, metadata and small-file count','Validate CCU/subscription/licensing calculations with commercial team','Review vendor hardware profiles, usable versus nominal SSD/HDD capacity and failure headroom']:
-     st.checkbox(item,key=f'review_{env}_{item}')
+     st.checkbox(item,key=f'review_{env}_{item}',help='Check this after a project reviewer has considered the item. Checking it does not change the sizing calculation.')
    with t5:
     st.markdown('#### Sensitivity analysis')
     st.write('Explore how plausible increases in Base raw-data volume and peak workload demand affect the estimate. These scenarios do not change your confirmed baseline inputs.')
-    sensitivity_pct=st.slider('Increase for what-if scenarios (%)',5,100,20,5,key=f'sensitivity_pct_{env}',help='Applies independently to initial data plus daily ingest, and to peak vCores plus peak RAM. The combined scenario applies the increase to both.')
+    sensitivity_pct=st.slider('Increase for what-if scenarios (%)',5,100,20,5,key=f'sensitivity_pct_{env}',help=FIELD_HELP['sensitivity'])
     st.caption(f'Unit: percent increase over the confirmed baseline. Data Services workload quantities and hardware assumptions stay fixed; Data Services results are shown for context only. Storage is nominal raw TB.')
     try:
      sensitivity_results=calculate_sensitivity(profile,sensitivity_pct,include_ds=c['platform']!='Base only')
@@ -330,7 +406,7 @@ else:
     input_display={'initial_data':initial_display,'daily_ingest':daily_display,'units':input_units}
     payload={'generated_at':datetime.now().isoformat(timespec='seconds'),'rules':{'version':RULES_VERSION,'source':RULES_SOURCE,'GB_per_TB':GB_PER_TB,'display_rounding':'Forecast table values rounded to 2 decimal places; sizing uses full precision','input_units':input_units},'client':{'name':c['name'],'project':c['project'],'selected_environments':c['environments'],'sized_environment':env,'platform':c['platform'],'notes':c['notes']},'base_inputs':b,'base_inputs_as_entered':input_display,'base_output':base,'ds_inputs':d if ds else None,'ds_services':services if ds else None,'ds_output':ds,'sensitivity_analysis':sensitivity_results,'bom':bom,'warnings':warnings_list,'disclaimer':'Reference estimate based on supplied workbook; not a vendor-certified production design.'}
     environment_file=env.lower().replace(' ','_')
-    st.download_button('⬇ Download full calculation (JSON)',json.dumps(payload,indent=2).encode(),f'cloudera_sizing_{environment_file}.json','application/json')
+    st.download_button('⬇ Download full calculation (JSON)',json.dumps(payload,indent=2).encode(),f'cloudera_sizing_{environment_file}.json','application/json',help=BUTTON_HELP['⬇ Download full calculation (JSON)'])
     inventory=pd.DataFrame(bom)
     inventory['Platform scope']=c['platform'];inventory['Environment']=env;inventory['Selected environments']=', '.join(c['environments']);inventory['Rules version']=RULES_VERSION
     inventory['Base sizing driver']=base['driver'];inventory['Data Services sizing driver']=ds['driver'] if ds else 'Not calculated — Base-only scope selected'
@@ -340,7 +416,7 @@ else:
     inventory['Data Services workers']=ds['workers'] if ds else 'Not calculated';inventory['Data Services masters']=ds['masters'] if ds else 'Not calculated'
     inventory['Sizing input units (JSON)']=json.dumps(input_units,sort_keys=True);inventory['Warnings']='; '.join(warnings_list)
     inventory['Assumptions']='Separate cluster for each selected environment; hardware completeness and product compatibility require review.'
-    st.download_button('⬇ Download node inventory (CSV)',inventory.to_csv(index=False).encode(),f'cloudera_inventory_{environment_file}.csv','text/csv')
+    st.download_button('⬇ Download node inventory (CSV)',inventory.to_csv(index=False).encode(),f'cloudera_inventory_{environment_file}.csv','text/csv',help=BUTTON_HELP['⬇ Download node inventory (CSV)'])
     bom_rows=''.join('<tr>'+''.join(f'<td>{html.escape(str(value))}</td>' for value in row.values())+'</tr>' for row in bom)
     bom_headers=''.join('<th>'+html.escape(str(key))+'</th>' for key in bom[0])
     warning_rows=''.join('<li>'+html.escape(warning)+'</li>' for warning in warnings_list)
@@ -358,10 +434,10 @@ else:
      sensitivity_rows=''.join('<tr>'+''.join('<td>'+html.escape(format(value,'.2f') if isinstance(value,float) else str(value))+'</td>' for value in row.values())+'</tr>' for row in sensitivity_results)
      sensitivity_report=f'<h2>What-if sensitivity analysis</h2><p>Positive-only sensitivity cases against the confirmed baseline. Data changes scale initial data and daily ingest; compute changes scale peak vCores and RAM. Data Services workload quantities and hardware remain fixed.</p><table><tr>{sensitivity_headers}</tr>{sensitivity_rows}</table>'
      report=report.replace('</body>',sensitivity_report+'</body>')
-    st.download_button('⬇ Download printable report (HTML)',report.encode(),f'cloudera_report_{environment_file}.html','text/html')
+    st.download_button('⬇ Download printable report (HTML)',report.encode(),f'cloudera_report_{environment_file}.html','text/html',help=BUTTON_HELP['⬇ Download printable report (HTML)'])
     st.markdown('#### AI architectural review (optional)')
     st.caption('This agent explains risks and asks for missing inputs; it cannot alter calculated node counts.')
-    if st.button('Generate independent AI review',key=f'ai_review_button_{env}'):
+    if st.button('Generate independent AI review',key=f'ai_review_button_{env}',help=BUTTON_HELP['Generate independent AI review']):
      try:st.session_state[f'ai_review_{env}']=review_sizing(payload)
      except Exception as e:st.error(str(e))
     if st.session_state.get(f'ai_review_{env}'):st.markdown(st.session_state[f'ai_review_{env}'])
