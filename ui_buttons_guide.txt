@@ -52,7 +52,8 @@ LEFT SIDEBAR — AVAILABLE ON ALL PAGES
 STEP 1 — CLIENT
 
 Environment selector — “Environments to size”
-- Control: Choose one or more environments, such as Production or UAT.
+- Control: Choose one or more environments, such as Production, Disaster
+  Recovery, UAT, Development, or PoC.
 - Role: Creates a separate sizing profile for each selected environment.
 - Priority: HIGH.
 - Tip: The environments are sized separately. Their node counts are not
@@ -96,11 +97,19 @@ Analyze with AI agent
 - Note: This creates a preview. It does not change sizing inputs by itself.
 
 Apply non-null extracted numeric inputs
-- Button role: Apply valid numeric suggestions to the Base profile of each
-  selected environment and add suggested notes to the customer notes.
+- Control: Select one target environment, then apply valid numeric
+  suggestions to that environment's Base profile and add suggested notes.
 - Priority: OPTIONAL.
-- Before using it: Check the preview. After applying, review each environment's
-  values before confirming.
+- Before using it: Check the preview. Other environment profiles are not
+  changed.
+
+Save or reopen a sizing project
+- Control: Download the project as JSON, or upload a previously saved JSON
+  project and open it.
+- Role: Preserve and restore customer details, all environment profiles,
+  Data Services workloads, and planning inputs.
+- Priority: MEDIUM.
+- Note: Files are local and portable; protect them as customer data.
 
 Next
 - Button role: Continue to Data & Workload.
@@ -170,6 +179,34 @@ Expected compression ratio
 - The field is labeled “(x)” because this is a multiplier, such as 3x, not a
   percentage.
 
+Per-class data, metadata and workload profile
+- Control: Add or edit rows for each named data class.
+- Role: Set class-specific raw volume, ingest, growth, compression, cold
+  share, retention, audit/log growth, average file size, workload profile,
+  per-TB CPU/RAM factors and per-query demand.
+- Priority: HIGH. When at least one row is present, these rows drive the
+  storage forecast and can contribute derived peak CPU/RAM demand.
+- Note: The single-volume fields above remain the fallback when this table is
+  empty. File/object counts and entered workload factors are estimates.
+
+Kafka event-stream planning
+- Control: Enable Kafka planning and enter peak throughput, partitions,
+  retention, replication, and per-node throughput/partition capacities.
+- Role: Estimate retained replicated storage and the larger of throughput-
+  and partition-driven dedicated worker counts.
+- Priority: HIGH when Kafka is part of the architecture.
+- Note: Per-node limits must be set from the target version and hardware;
+  Kafka is a separate pool and is not added to Base storage.
+
+Kudu storage planning
+- Control: Enable Kudu and enter raw table TB, replication factor, and usable
+  data TB per node.
+- Role: Estimate replicated Kudu storage and disk-driven dedicated worker
+  count.
+- Priority: MEDIUM when Kudu is part of the design.
+- Note: CPU, tablet placement, topology and usable disk assumptions require
+  separate validation.
+
 Back
 - Button role: Return to the Client page.
 - Priority: MEDIUM. Use it to change the customer, environment, or scope.
@@ -184,6 +221,21 @@ Environment profile to edit
 - Control: Choose which selected environment you are editing.
 - Role: Shows and saves hardware and rule values for that environment only.
 - Priority: HIGH. Check the environment before changing assumptions.
+
+Environment capacity scale
+- Control: Percentage field from 1% to 500%.
+- Role: Scale this environment's entered data, workload, Data Services and
+  Kafka demand while keeping the hardware and policy inputs fixed.
+- Priority: MEDIUM. Leave at 100% when entering absolute environment values.
+
+Disaster Recovery operating mode
+- Control: For the Disaster Recovery environment, choose Active, Warm
+  standby, or Backup only.
+- Role: Record the intended operating model alongside the selected workload
+  capacity scale.
+- Priority: MEDIUM.
+- Note: This selection does not calculate replication, failover, or RPO/RTO
+  infrastructure.
 
 Data disk capacity
 - Control: Number field with minus/plus buttons; value is TB per data disk.
@@ -215,10 +267,19 @@ Hot/HDFS replication
 - Role: Set the storage replication factor used for hot data.
 - Priority: HIGH. It affects protected storage requirements.
 
-EC overhead multiplier
-- Control: Number field with minus/plus buttons; value is a multiplier.
-- Role: Set the storage overhead factor for erasure-coded data.
+Ozone erasure-coding scheme
+- Control: Choose RS-3-2, RS-6-3 or RS-10-4.
+- Role: Set the matching data-plus-parity overhead multiplier used for cold
+  data protection.
 - Priority: HIGH. It affects protected storage requirements.
+
+Licensing and environment planning
+- Control: Optionally enter included CCU, included licensed TB and explicitly
+  excluded TB.
+- Role: Compare estimated Base worker CCU and retained design raw TB against
+  the supplied allowances.
+- Priority: MEDIUM. This is an indicative comparison only, not a license
+  determination.
 
 Temp/shuffle overhead
 - Control: Percentage slider.
@@ -242,6 +303,14 @@ Production HA for Base masters
 - Role: Choose whether the Base master plan uses the app's production
   high-availability setting.
 - Priority: HIGH when production availability is required.
+
+Required services and manual node-role inventory
+- Control: Mark NiFi, HBase, Management/Control Plane, Ranger/Atlas, external
+  database or another service as required and enter planned nodes and
+  per-node hardware.
+- Role: Add required roles to environment totals and the preliminary BOM.
+- Priority: HIGH for planning the complete environment.
+- Note: Counts are manual inputs and are not derived from workload demand.
 
 Back
 - Button role: Return to Data & Workload.
@@ -275,10 +344,23 @@ Service workload table
   workload demand.
 - Component and Basis columns are read-only descriptions.
 
+Cloudera AI GPU nodes and GPUs per node
+- Control: Enter the planned manual GPU-node and GPU-per-node counts.
+- Role: Add the GPU hosts to the Data Services preliminary inventory.
+- Priority: MEDIUM when GPU workloads are included.
+- Note: GPU-specific demand and utilization are not calculated.
+
 vCores per DS worker
 - Control: Number field with minus/plus buttons.
 - Role: Set CPU capacity for one Data Services worker.
 - Priority: HIGH when sizing Data Services.
+
+Connected Base environments and Control Plane demand
+- Control: Enter the number of connected environments and optional per-
+  environment Control Plane vCores, RAM and block storage.
+- Role: Add customer-entered per-environment resource overhead to Data
+  Services aggregate demand before calculating workers.
+- Priority: MEDIUM. Defaults for the additional resource overhead are zero.
 
 RAM per DS worker
 - Control: Number field with minus/plus buttons; value is GB per worker.
@@ -380,6 +462,13 @@ Result cards
 - Priority: HIGH for a quick overview.
 - Note: In Base-only scope, Data Services says it was not calculated.
 
+Environment and project node roll-up
+- Role: Show Base, Data Services, Kafka and total node counts for each
+  selected environment, plus the arithmetic project total.
+- Priority: HIGH for planning multiple environments.
+- Note: Environments remain separate clusters; the project total is not a
+  shared-cluster estimate.
+
 Summary tab
 - Role: Show the customer/project, scope, sizing driver, storage capacity,
   inputs, and preliminary node inventory.
@@ -388,8 +477,9 @@ Summary tab
   review; the estimate is not a complete procurement list.
 
 Calculation breakdown tab
-- Role: Show the forecast, storage formula, worker counts by constraint, and
-  Data Services breakdown when included.
+- Role: Show the forecast, year-by-year raw disk and Base worker estimates,
+  storage formula, worker counts by constraint, data-class details and Data
+  Services breakdown when included.
 - Priority: HIGH when checking how the app reached its estimate.
 
 Architecture & checks tab

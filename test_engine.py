@@ -111,6 +111,11 @@ def test_base_sizing_drivers():
     inputs.update(initial_tb=1,daily_gb=0,peak_vcores=0,peak_ram=0)
     result=calculate_base(inputs)
     assert result['workers']==9 and result['driver']=='EC minimum'
+    inputs=default_base()
+    inputs['ec_overhead']=5/3
+    assert calculate_base(inputs)['candidates']['EC minimum']==5
+    inputs['ec_overhead']=1.4
+    assert calculate_base(inputs)['candidates']['EC minimum']==14
 
 def test_ds_rejects_invalid_values():
     inputs=default_ds()
@@ -135,6 +140,95 @@ def test_ds():
     assert x['workers']==13
     assert x['masters']==3
     assert x['total_nodes']==16
+    gpu=default_ds()
+    gpu.update(gpu_nodes=2,gpus_per_node=4)
+    gpu_result=calculate_ds(gpu,DS_DEFAULTS)
+    assert gpu_result['gpu_nodes']==2 and gpu_result['gpus_per_node']==4
+    assert gpu_result['total_nodes']==18
+    connected=default_ds()
+    connected.update(connected_environments=2,control_plane_vcores_per_environment=8,externalfs_tb=12)
+    connected_result=calculate_ds(connected,DS_DEFAULTS)
+    assert connected_result['control_plane_demand']['vcores']==16
+    assert connected_result['externalfs_tb']==12
+    assert connected_result['cde_jobs_per_worker']==10/connected_result['workers']
+
+def test_data_class_storage_metadata_and_derived_compute():
+    inputs=default_base()
+    inputs.update(peak_vcores=0,peak_ram=0,years=2)
+    data_classes=[{
+        'Data class':'Audit',
+        'Initial raw data (TB)':10,
+        'Daily ingest (GB/day)':0,
+        'Annual growth (%)':0,
+        'Compression ratio (x)':2,
+        'Cold data (%)':40,
+        'Retention years':3,
+        'Audit/log growth (TB/year)':1,
+        'Average file size (MB)':1,
+        'Workload profile':'Heavy',
+        'vCores per TB':2,
+        'RAM GB per TB':4,
+        'Concurrent queries':10,
+        'vCores per query':1,
+        'RAM GB per query':2,
+        'vCores per GB RAM':1.5,
+    }]
+    result=calculate_base(inputs,data_classes)
+    assert result['design_raw_tb']==12
+    assert result['stored_tb']==6
+    assert abs(result['required_disk_tb']-(6*2.4*1.3/.85))<1e-10
+    assert result['peak_vcores_used']==102
+    assert result['peak_ram_used']==68
+    assert result['yearly_capacity'][1]['Required raw disk (TB)']==result['required_disk_tb']
+    assert result['data_classes'][0]['Estimated files/objects']==12*1024*1024
+    assert result['data_classes'][0]['Workload profile']=='Heavy'
+
+def test_kafka_and_licensing_estimates():
+    kafka=default_kafka()
+    kafka.update(enabled=True,throughput_mb_s=40,partitions=200,retention_days=3,replication=3,
+                 node_throughput_mb_s=20,partitions_per_node=100)
+    result=calculate_kafka(kafka)
+    assert result['throughput_nodes']==2
+    assert result['partition_nodes']==2
+    assert result['workers']==2
+    assert abs(result['storage_tb']-(40*86400*3*3/(1024*1024)))<1e-10
+    kafka['partitions_per_node']=0
+    try:
+        calculate_kafka(kafka)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError('Kafka worker capacity must be supplied')
+    profile={'base':default_base(),'ds':default_ds(),'services':[list(row) for row in DS_DEFAULTS],
+             'licensing':{'enabled':True,'included_ccu':1,'included_tb':10,'excluded_tb':5}}
+    sized=calculate_environment(profile,include_ds=False)
+    assert sized['licensing']['estimated_ccu']==sized['base']['total_worker_ccu']
+    assert sized['licensing']['excess_ccu']==sized['base']['total_worker_ccu']-1
+    assert sized['licensing']['estimated_included_tb']==sized['base']['design_raw_tb']-5
+    assert sized['total_nodes']==sized['base']['total_nodes']
+
+def test_kudu_and_dedicated_service_inventory():
+    kudu=default_kudu()
+    kudu.update(enabled=True,data_tb=100,replication=3,disk_per_node_tb=100)
+    assert calculate_kudu(kudu)=={'protected_tb':300,'workers':3}
+    pools=[['Apache NiFi',True,2,16,64,2],['Optional HBase',False,0,0,0,0]]
+    assert calculate_service_pools(pools)['total_nodes']==2
+    profile={'base':default_base(),'ds':default_ds(),'services':[list(row) for row in DS_DEFAULTS],
+             'kudu':kudu,'service_pools':pools}
+    result=calculate_environment(profile,include_ds=False)
+    assert result['kudu']['workers']==3
+    assert result['dedicated_services']['total_nodes']==2
+    assert result['total_nodes']==result['base']['total_nodes']+5
+
+def test_environment_capacity_scale():
+    profile={'base':default_base(),'ds':default_ds(),'services':[list(row) for row in DS_DEFAULTS],
+             'capacity_percent':50}
+    result=calculate_environment(profile,include_ds=False)
+    assert result['capacity_percent']==50
+    assert result['base']['design_raw_tb']<calculate_base(default_base())['design_raw_tb']
+    assert result['total_nodes']==result['base']['total_nodes']
+    baseline=calculate_base(default_base())
+    assert baseline['yearly_capacity'][2]['Base workers']==baseline['workers']
 
 if __name__=='__main__':
-    test_unit_equivalence();test_separate_environment_results();test_sensitivity_scenarios_are_independent_and_validated();test_base();test_base_rejects_invalid_values();test_base_sizing_drivers();test_ds_rejects_invalid_values();test_ds();print('All test checks passed')
+    test_unit_equivalence();test_separate_environment_results();test_sensitivity_scenarios_are_independent_and_validated();test_base();test_base_rejects_invalid_values();test_base_sizing_drivers();test_ds_rejects_invalid_values();test_ds();test_data_class_storage_metadata_and_derived_compute();test_kafka_and_licensing_estimates();test_kudu_and_dedicated_service_inventory();test_environment_capacity_scale();print('All test checks passed')

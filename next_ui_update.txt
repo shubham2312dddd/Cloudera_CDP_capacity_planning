@@ -1,6 +1,6 @@
 Cloudera Infrastructure Sizing Studio
 UI Updates — Simple Change List
-Updated: 21 October 2026
+Updated: 26 October 2026
 
 This file explains the updates in simple words. Each item says what changed,
 why it changed, what could happen without it, and what happens now.
@@ -111,6 +111,30 @@ why it changed, what could happen without it, and what happens now.
 - After update: Users can preview extracted values before applying them.
   AI review gives advice but does not change calculated node counts.
 
+13. High/Medium priority planning features from the feature matrix
+- Update: Added optional per-data-class forecasts with retention, audit/log
+  growth, compression, cold-data protection, average-file-size object counts,
+  and workload CPU/RAM factors. Added selectable Ozone EC schemes, environment
+  capacity scaling, optional Kafka and Kudu estimates, manual dedicated
+  service/GPU node inventories, connected-environment Control Plane overhead,
+  year-by-year worker forecasts, a separate
+  environment node roll-up, and an indicative Base CCU/data allowance
+  comparison.
+- Why: A single blended data volume and one total-node result can hide
+  materially different data, workload, stream-processing, environment, and
+  entitlement assumptions.
+- After update: Class calculations and dedicated service estimates are
+  visible in results and available in exports. Per-node Kafka capacities,
+  workload factors, licensing allowances, and environment scales are editable
+  assumptions and must be validated with the design team.
+
+14. Save and reopen sizing projects
+- Update: Added portable JSON project download and upload for client details
+  and environment profiles.
+- Why: Users need to continue a sizing project after closing the browser.
+- After update: A reopened project returns to the first step and requires a
+  fresh review and confirmation before results can be used.
+
 Important note
 These results are planning estimates, not a final hardware order. Check the
 Cloudera version, workload, hardware, licensing, network, high availability,
@@ -150,10 +174,9 @@ procurement.
 
 
 
-Worthwhile improvements to do next
-These are suggestions for future work, not features that are already
-implemented. The list focuses on changes that can prevent mistakes or make
-the estimate easier to trust and use.
+Further improvements and implementation status
+The list below distinguishes completed UI updates from remaining validation
+work. It focuses on preventing mistakes and making estimates easier to trust.
 
 1. Verify the formulas against the workbook
 - Improvement: Compare the app's calculations with the matching workbook
@@ -181,18 +204,16 @@ the estimate easier to trust and use.
   not as a percentage.
 - If skipped: Users may enter or read the value as a percent and get the
   wrong idea about the storage estimate.
-- Priority: High. This is a small change that can prevent a common input
-  misunderstanding.
+- Status: Implemented. The current field is labeled “Expected compression
+  ratio (x)” and help text explains that it is a multiplier.
 
 4. Make AI apply targets clear
 - Improvement: Let users choose which environment receives extracted AI
-  values, or clearly confirm that the values will be copied to every selected
-  environment.
+  values.
 - Why it is worth doing: Different environments often have different
   workloads and sizes.
-- If skipped: A user may unintentionally copy the same requirements into all
-  environment profiles.
-- Priority: High when using AI extraction; optional otherwise.
+- Status: Implemented. AI values are applied only to the environment chosen
+  in the target selector.
 
 5. Add save and reopen for sizing projects
 - Improvement: Let users save a project and later reopen its customer details,
@@ -201,10 +222,11 @@ the estimate easier to trust and use.
   continue work after closing the app.
 - If skipped: Users may have to re-enter information or rely on downloaded
   files to restore a project.
-- Priority: Medium. First decide where projects should be stored and who can
-  access them, especially if the app is shared.
+- Status: Implemented as portable JSON download/upload. Files are local and
+  must be protected under the organization's customer-data handling rules.
 
 Suggested order
-Start by checking the workbook formulas and adding result/export tests. Then
-fix the compression label and make AI apply targets clear. Add project
-save/reopen after deciding how project data should be stored and protected.
+Next, verify formulas against the source workbook and add automated checks
+that compare screen results with JSON, CSV, and printable report exports.
+Validate customer-supplied workload factors, Kafka capacities, and licensing
+assumptions against the exact Cloudera version and target hardware.
